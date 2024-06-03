@@ -5,17 +5,21 @@ import { AppBar, Toolbar, Typography, Button, IconButton, Grid, Container, Card,
 import './index.css';
 
 const NavBar = () => (
-  <AppBar position="static" className="bg-blue-500">
+  <AppBar position="static" className="bg-blue-200">
     <Toolbar>
-      <IconButton edge="start" color="inherit" aria-label="menu" sx={{ mr: 2 }}>
-        {/* Icono del menú */}
-      </IconButton>
+<IconButton edge="start" color="inherit" aria-label="menu" sx={{ mr: 2 }}>
+  <img src='src/assets/coctel.png' height={70} width={70} alt="Menú" /></IconButton>
+
+
       <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
         Cocktails
       </Typography>
       <Button color="inherit">Home</Button>
-      <Button color="inherit">About</Button>
-      <Button color="inherit">Contact</Button>
+      <Button color="inherit">
+        <a href="https://www.thecocktaildb.com/api.php" style={{ color: 'inherit', textDecoration: 'none' }}>API</a>
+      </Button>
+      <Button color="inherit">
+      <img src='src/assets/yo.jpg' height={70} width={70} alt="Yo" /></Button>
     </Toolbar>
   </AppBar>
 );
@@ -23,7 +27,7 @@ const NavBar = () => (
 const Footer = () => (
   <footer className="bg-gray-800 text-white py-4 mt-8">
     <div className="container mx-auto text-center">
-      <p>&copy; 2024 TheCocktailDB. All rights reserved.</p>
+      <p>&copy; 2024 TheCocktailDB DISEÑO FRONTEND - Elabora: Alejandro Rojas ISC- 8A.</p>
     </div>
   </footer>
 );
@@ -47,7 +51,6 @@ const CocktailCard = ({ cocktail }) => {
       const cocktailDetails = response.data.drinks[0];
       const ingredientsList = [];
 
-      // Obtener todos los ingredientes
       for (let i = 1; i <= Object.keys(cocktailDetails).length; i++) {
         if (cocktailDetails[`strIngredient${i}`]) {
           ingredientsList.push(`${cocktailDetails[`strIngredient${i}`]} - ${cocktailDetails[`strMeasure${i}`] || ''}`);
@@ -61,7 +64,7 @@ const CocktailCard = ({ cocktail }) => {
   };
 
   return (
-    <Card>
+    <Card sx={{ maxWidth: 345, margin: 'auto' }}>
       <CardMedia
         component="img"
         height="140"
@@ -71,6 +74,9 @@ const CocktailCard = ({ cocktail }) => {
       <CardContent>
         <Typography gutterBottom variant="h5" component="div">
           {cocktail.strDrink}
+        </Typography>
+        <Typography variant="body2" color="textSecondary">
+          {cocktail.strAlcoholic}
         </Typography>
         <Button variant="contained" color="primary" onClick={handleClickOpen}>
           Ver Ingredientes
@@ -89,11 +95,19 @@ const CocktailCard = ({ cocktail }) => {
     </Card>
   );
 };
+//se realiza un mapeo de todos los componentes cocktail existente 
 
 const CocktailList = ({ cocktails }) => {
+  if (cocktails.length === 0) {
+    return (
+      <Typography variant="h6" sx={{ marginTop: '50px', marginBottom: '50px', textAlign: 'center' }}>
+        No hay resultados
+      </Typography>
+    );
+  }
   return (
     <Container>
-      <Grid container spacing={4}>
+      <Grid container spacing={4} justifyContent="center">
         {cocktails.map((cocktail) => (
           <Grid item key={cocktail.idDrink} xs={12} sm={6} md={4}>
             <CocktailCard cocktail={cocktail} />
@@ -107,33 +121,22 @@ const CocktailList = ({ cocktails }) => {
 const App = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState('');
-  const [page, setPage] = useState(1);
   const [cocktails, setCocktails] = useState([]);
+  const [allCocktails, setAllCocktails] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [resultsCount, setResultsCount] = useState(0);
 
   const fetchCocktails = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`https://www.thecocktaildb.com/api/json/v1/1/search.php?s=${searchTerm}&p=${page}`);
-
-// Aplicar el filtro si se selecciona alguno
-const filteredCocktails = response.data.drinks.filter(cocktail => {
-  if (filter === "") return true; // Si no hay filtro, mostrar todos los cócteles
-  return cocktail.strAlcoholic === filter; // Filtrar por tipo de cóctel (alcohólico / no alcohólico)
-});
-
-// Actualizar el estado de los cócteles con los resultados filtrados
-setCocktails(prevCocktails => [...prevCocktails, ...filteredCocktails]);
-      const newCocktails = response.data.drinks.filter(newCocktail => !cocktails.some(existingCocktail => existingCocktail.idDrink === newCocktail.idDrink));
-      setCocktails(prevCocktails => [...prevCocktails, ...newCocktails]);
-      setResultsCount(response.data.drinks.length);
+      const response = await axios.get(`https://www.thecocktaildb.com/api/json/v1/1/search.php?s=${searchTerm}`);
+      setAllCocktails(response.data.drinks);
+      setCocktails(response.data.drinks);
     } catch (error) {
       console.error("Error fetching cocktails:", error);
     } finally {
       setLoading(false);
     }
-  }, [searchTerm, page, cocktails]);
+  }, [searchTerm]);
 
   useEffect(() => {
     fetchCocktails();
@@ -141,29 +144,39 @@ setCocktails(prevCocktails => [...prevCocktails, ...filteredCocktails]);
 
   const handleSearchChange = (event) => {
     setSearchTerm(event.target.value);
-    setPage(1); // Resetear la página al realizar una nueva búsqueda
-    setCocktails([]); // Limpiar los resultados anteriores al realizar una nueva búsqueda
+  };
+
+  const handleSearch = () => {
+    const filteredCocktails = allCocktails.filter(cocktail => cocktail.strDrink.toLowerCase().includes(searchTerm.toLowerCase()));
+    setCocktails(filteredCocktails);
   };
 
   const handleFilterChange = (event) => {
     setFilter(event.target.value);
-  };
-
-  const handleLoadMore = () => {
-    setPage(prevPage => prevPage + 1);
+    const filteredCocktails = allCocktails.filter(cocktail => {
+      if (event.target.value === "") return true;
+      return cocktail.strAlcoholic === event.target.value;
+    });
+    setCocktails(filteredCocktails);
   };
 
   return (
     <div className="flex flex-col min-h-screen items-center justify-center">
       <NavBar />
-      <div className="flex-grow">
+      <div className="flex-grow flex flex-col items-center">
         <h1 className="text-center text-4xl font-bold mt-8 mb-4">Lista de Cócteles</h1>
-        <div className="flex justify-between">
-          <TextField label="Buscar por nombre" variant="outlined" value={searchTerm} onChange={handleSearchChange} />
-          <Typography variant="subtitle1" component="div">
-            Resultados: {resultsCount}
-          </Typography>
-          <FormControl variant="outlined">
+        <div className="flex flex-col md:flex-row justify-center items-center " style={{ width: '80%' }}>
+          <TextField 
+            label="Buscar por nombre" 
+            variant="outlined" 
+            value={searchTerm} 
+            onChange={handleSearchChange} 
+            sx={{ height: '50px', width: '30%', backgroundColor: 'lightblue' }} 
+          />
+          <Button variant="contained" color="primary" onClick={handleSearch} sx={{ height:'50px' }}>
+            Buscar
+          </Button>
+          <FormControl variant="outlined" sx={{ minWidth: 120 }}>
             <InputLabel id="filter-label">Filtrar</InputLabel>
             <Select
               labelId="filter-label"
@@ -179,11 +192,6 @@ setCocktails(prevCocktails => [...prevCocktails, ...filteredCocktails]);
         </div>
         <CocktailList cocktails={cocktails} />
         {loading && <p>Cargando...</p>}
-        {!loading && cocktails.length > 0 && (
-          <div className="text-center mt-4">
-            <Button variant="contained" color="primary" onClick={handleLoadMore}>Cargar más</Button>
-          </div>
-        )}
       </div>
       <Footer />
     </div>
